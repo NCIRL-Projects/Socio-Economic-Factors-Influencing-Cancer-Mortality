@@ -1,0 +1,438 @@
+---
+output: 
+  html_document: 
+    fig_width: 9
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r}
+library(corrplot)
+library(tidyverse)
+library(modelr)
+library(Metrics)
+library(MLmetrics)
+library(lmtest)
+library(corrplot)
+library(car)
+library(leaps)
+
+```
+
+```{r}
+# Loading the data
+cancer_data <- as.data.frame(read.csv("cancer.csv", header = TRUE))
+# sorting the data frame by the Population variable in ascending order
+cancer_data_sorted <- cancer_data[order(cancer_data$Population),]
+# displaying the sorted data frame
+head(cancer_data_sorted)
+tail(cancer_data_sorted)
+```
+```{r}
+# Filtering Data
+data <- filter(cancer_data_sorted, Population > 10000 )
+```
+
+```{r}
+# Data summary
+summary(data)
+```
+
+```{r}
+# create histograms with density function for normal distribution
+histogram <- function(x)
+{
+title <- paste(deparse(substitute(x), 500), collapse="\n")
+sdx <- sd(x)
+mx <- mean(x)
+hist(x, prob=TRUE,
+main=paste("Histogram of",title),
+xlim=c(mx-3*sdx, mx+3*sdx), ylim=c(0, 0.5/sdx))
+curve(dnorm(x, mean=mx, sd=sdx), col='red', lwd=3, add=TRUE)
+}
+```
+
+
+```{r}
+# data transformation
+#^0.5 transformation for variables that have a highly skewed distribution with a long tail on the right side.
+#log() transformation is often used for variables that have a skewed distribution with a long tail on the left side
+#1/ transformation is useful for variables that have a skewed distribution with a long tail on the left side, similar to taking the logarithm.
+par(mfrow=c(2,2))
+
+histogram(data$incidenceRate)
+histogram(data$medIncome)
+histogram(log(data$medIncome))
+histogram(data$povertyPercent)
+histogram(log(data$povertyPercent))
+histogram(data$MedianAge)
+histogram(1/data$MedianAge)
+histogram(data$MedianAgeMale)
+histogram(data$MedianAgeFemale)
+histogram(data$AvgHouseholdSize)
+histogram(1/data$AvgHouseholdSize)
+histogram(data$medIncome)
+histogram(log(data$medIncome))
+histogram(data$PctMarriedHouseholds)
+histogram(data$PctNoHS18_24)
+histogram(data$PctHS18_24)
+histogram(data$PctBachDeg18_24)
+histogram(data$PctHS25_Over)
+histogram(data$PctBachDeg25_Over)
+histogram(log(data$PctBachDeg25_Over))
+histogram(data$PctUnemployed16_Over)
+histogram(data$PctUnemployed16_Over^0.5)
+histogram(data$PctPrivateCoverage)
+histogram(data$PctEmpPrivCoverage)
+histogram(data$PctPublicCoverage)
+histogram(data$PctPublicCoverageAlone)
+histogram(data$PctWhite)
+histogram(log(data$PctWhite))
+histogram(data$PctBlack)
+histogram(data$PctAsian)
+histogram(data$PctAsian^0.5)
+histogram(data$PctOtherRace)
+histogram(data$PctOtherRace^0.5)
+```
+
+
+
+```{r}
+# creating scatter plot matrix using pairs to study the relation between different variables
+pairs(data[,3:25], pch = 19)
+```
+```{r}
+# Checking  for multicollinearity
+
+corrplot(cor(data[,2:23]), method = "color")
+```
+
+```{r}
+# displaying all the variable names
+names(data)
+```
+
+
+```{r}
+# Creating linear model with all variables
+lm <- lm(deathRate ~ povertyPercent + medIncome + MedianAge + MedianAgeMale + MedianAgeFemale + AvgHouseholdSize + PctMarriedHouseholds + PctNoHS18_24 + PctBachDeg18_24 + PctHS25_Over + PctBachDeg25_Over + PctUnemployed16_Over + PctPrivateCoverage + PctEmpPrivCoverage + PctEmpPrivCoverage + PctPublicCoverage + PctPublicCoverageAlone + PctWhite + PctBlack + PctAsian + PctOtherRace, data=data)
+
+summary(lm)
+```
+```{r}
+#Correlation Matrix
+corr_matrix <- cor(data[, 2:25], data[, "deathRate"])
+
+# print the correlation matrix
+print(corr_matrix)
+```
+
+
+
+##Considering Simple linear regressions between deathRate  and other variables
+
+```{r}
+# deathRate as a function of incidentRate. Low P-value means makes this variable statistically significan
+plot(data$deathRate ~ data$incidenceRate)
+lm0 <- lm(deathRate ~ incidenceRate, data=data)
+abline(lm0, col='red', lw=3)
+summary(lm0)
+```
+
+```{r}
+# deathRate as a function of medIncome. Low P-value means makes this variable statistically significant 
+plot(data$deathRate ~ data$medIncome)
+lm1 <- lm(deathRate ~ medIncome, data=data)
+abline(lm1, col='red', lw=3)
+summary(lm1)
+```
+
+```{r}
+ #deathRAte as a function of povertyPercent.Low P-value means makes this variable statistically significant
+plot(data$deathRate ~ data$povertyPercent)
+lm2 <- lm(deathRate ~ povertyPercent, data=data)
+abline(lm2, col='red', lw=3)
+summary(lm2)
+
+```
+
+```{r}
+
+# deathRate as a function of MedianAge. High P-Value makes this variable statistically not significnt
+plot(data$deathRate ~ data$MedianAge)
+lm3 <- lm(deathRate ~ MedianAge, data=data)
+abline(lm3, col='red', lw=3)
+summary(lm3)
+```
+
+
+```{r}
+
+# deathRate as a function of MedianAgeMale. Low P-Value makes this variable statistically not significnt.
+plot(data$deathRate ~ data$MedianAgeMale)
+lm4 <- lm(deathRate ~ MedianAgeMale, data=data)
+abline(lm4, col='red', lw=3)
+summary(lm4)
+```
+
+
+
+```{r}
+# deathRate as a function of MedianAgeFemale.Low P-value means makes this variable statistically significant
+plot(data$deathRate ~ data$MedianAgeFemale)
+lm5 <- lm(deathRate ~ MedianAgeFemale, data=data)
+abline(lm5, col='red', lw=3)
+summary(lm5)
+```
+```{r}
+# deathRate as a function of AvghousholdSize. Low P-Value makes this variable statistically not significnt
+plot(1/data$deathRate ~ data$AvgHouseholdSize)
+lm6 <- lm(1/deathRate ~ AvgHouseholdSize, data=data)
+abline(lm6, col='red', lw=3)
+summary(lm6)
+```
+```{r}
+# deathRate as a function of PctMarriedHousholds. Low P-Value makes this variable statistically significant
+plot(data$deathRate ~ data$PctMarriedHouseholds)
+lm7 <- lm(deathRate ~ PctMarriedHouseholds, data=data)
+abline(lm7, col='red', lw=3)
+summary(lm7)
+```
+
+```{r}
+# deathRate as a function of PctNoHighShool18_24. Low P-Value makes this variable statistically significant
+plot(data$deathRate ~ data$PctNoHS18_24)
+lm8 <- lm(deathRate ~ PctNoHS18_24, data=data)
+abline(lm8, col='red', lw=3)
+summary(lm8)
+```
+
+```{r}
+# deathRate as a function of PCTHighSchool18_24.Low P-Value makes this variable statistically significant
+plot(data$deathRate ~ data$PctHS18_24)
+lm9 <- lm(deathRate ~ PctHS18_24, data=data)
+abline(lm9, col='red', lw=3)
+summary(lm9)
+```
+```{r}
+# deathRate as a function of PctBachDeg18_24. Low P-Value makes this variable statistically significant
+plot(1/data$deathRate ~ data$PctBachDeg18_24)
+lm10 <- lm(1/deathRate ~ PctBachDeg18_24 , data=data)
+abline(lm10, col='red', lw=3)
+summary(lm10)
+```
+```{r}
+# deathRate as a function of PctHS25_Over. Low P-Value makes this variable statistically significant
+plot(data$deathRate ~ data$PctHS25_Over )
+lm11 <- lm(deathRate ~ PctHS25_Over , data=data)
+abline(lm11, col='red', lw=3)
+summary(lm11)
+```
+```{r}
+# deathRate as a function of PctHS25_Over. Low P-Value makes this variable statistically significant
+plot(data$deathRate ~ data$PctHS25_Over )
+lm12 <- lm(deathRate ~ PctBachDeg25_Over , data=data)
+abline(lm12, col='red', lw=3)
+summary(lm12)
+```
+```{r}
+# deathRate as a function of PctUnemployed16_Over. Low P-Value makes this variable statistically significant
+plot(data$deathRate ~ data$PctUnemployed16_Over )
+lm13 <- lm(deathRate ~ PctUnemployed16_Over , data=data)
+abline(lm13, col='red', lw=3)
+summary(lm13)
+```
+```{r}
+# deathRate as a function of PctPrivateCoverage. Low P-Value makes this variable statistically significant
+plot(data$deathRate ~ data$PctPrivateCoverage)
+lm14 <- lm(deathRate ~ PctPrivateCoverage, data=data)
+abline(lm14, col='red', lw=3)
+summary(lm14)
+```
+```{r}
+# deathRate as a function of PctEmpPrivCoverage. Low P-Value makes this variable statistically significant
+ plot(data$deathRate ~ data$PctEmpPrivCoverage)
+lm15 <- lm(deathRate ~ PctEmpPrivCoverage, data=data)
+abline(lm15, col='red', lw=3)
+summary(lm15)
+```
+
+```{r}
+# deathRate as a function of PctPublicCoverage. Low P-Value makes this variable statistically significant
+plot(data$deathRate ~ data$PctPublicCoverage)
+lm16 <- lm(deathRate ~ PctPublicCoverage, data=data)
+abline(lm16, col='red', lw=3)
+summary(lm16)
+```
+
+
+```{r}
+# deathRate as a function of PctPublicCoverageAlone. Low P-Value makes this variable statistically significant
+plot(data$deathRate ~ data$PctPublicCoverageAlone)
+lm17 <- lm(deathRate ~ PctPublicCoverageAlone, data=data)
+abline(lm17, col='red', lw=3)
+summary(lm17)
+```
+```{r}
+# deathRate as a function of PctWhite . High P-Value makes this variable statistically not significant
+plot(data$deathRate ~ data$PctWhite)
+lm18 <- lm(deathRate ~ PctWhite, data=data)
+abline(lm18, col='red', lw=3)
+summary(lm18)
+```
+```{r}
+# deathRate as a function of PctBlack. Low P-Value makes this variable statistically significant
+plot(data$deathRate ~ data$PctBlack)
+lm19 <- lm(deathRate ~ PctBlack, data=data)
+abline(lm19, col='red', lw=3)
+summary(lm19)
+```
+```{r}
+# deathRate as a function of PctAsian. Low P-Value makes this variable statistically significant
+plot(1/data$deathRate ~ data$PctAsian)
+lm20 <- lm(1/deathRate ~ PctAsian, data=data)
+abline(lm20, col='red', lw=3)
+summary(lm20)
+```
+```{r}
+# deathRate as a function of PctOtherRace. Low P-Value makes this variable statistically significant
+plot(data$deathRate ~ data$PctOtherRace)
+lm21 <- lm(deathRate ~ PctOtherRace, data=data)
+abline(lm21, col='red', lw=3)
+summary(lm21)
+```
+```{r}
+#Displaying variables
+names(data)
+```
+```{r}
+# Adding transformed variables to data frame
+data$logIncome <- log(data$medIncome)
+data$logPctBachDeg25_Over<- log(data$PctBachDeg25_Over)
+data$sqrtPctUnemployed16_Over <- sqrt(data$PctUnemployed16_Over)
+data$sqrtPctOtherRace <- sqrt(data$PctOtherRace)
+```
+
+
+```{r}
+# First Model based on observations
+final_lm <- lm( deathRate ~  incidenceRate  +  MedianAgeFemale + AvgHouseholdSize   + logPctBachDeg25_Over + sqrtPctUnemployed16_Over + PctPublicCoverageAlone +PctWhite+ sqrtPctOtherRace, data=data)
+
+summary(final_lm)
+```
+
+```{r}
+# Plotting Linear model
+par(mfrow=c(2,2))
+plot(final_lm)
+```
+```{r}
+# Removing outliers
+data1 <- subset( data, subset= ! as.integer(rownames(data)) %in% c (  549, 109, 951, 643, 109, 2310, 1091, 79, 1634, 338, 1187, 969, 940, 685, 585, 940, 276, 2320, 509, 352, 881, 1693, 212, 335, 1839, 1663, 498, 130, 285, 2363, 286, 457, 344, 1839, 1528, 615, 2026, 107,268, 305, 1665, 1666, 373, 1862, 2080, 238, 1384, 906, 1894, 1699, 1668, 54, 1598))
+```
+
+```{r}
+# Final linear model after removing outliers
+final_lm1 <- lm(deathRate ~  incidenceRate  +  MedianAgeFemale + AvgHouseholdSize   + logPctBachDeg25_Over + sqrtPctUnemployed16_Over + PctPublicCoverageAlone +PctWhite+ sqrtPctOtherRace, data=data1)
+
+summary(final_lm1)
+```
+
+```{r}
+# Plotting Linear model after removing outliers
+par(mfrow=c(2,2))
+plot(final_lm1)
+```
+```{r}
+# Displaying residuals
+fitted(final_lm1)
+residuals(final_lm1)
+```
+
+```{r}
+#Durbin Watson Test checking for independence of errors
+library(lmtest)
+dwtest(final_lm1)
+```
+```{r}
+
+# calculating Cook's distance to checking for influential data points
+cooksd <- cooks.distance(final_lm1)
+# create=ing a 2x2 plot of influence plots
+par(mfrow=c(2,2))
+car::influencePlot(final_lm1, scale = 3, main = "Data influence Plot")
+
+```
+
+
+```{r}
+# best (all) subsets
+
+bestfit <- regsubsets(deathRate ~incidenceRate  +  MedianAgeFemale + AvgHouseholdSize   + logPctBachDeg25_Over + sqrtPctUnemployed16_Over + PctPublicCoverageAlone +PctWhite+ sqrtPctOtherRace, data= data1, nbest = 2)
+
+summary(bestfit)
+par(mfrow=c(2,2))
+plot(bestfit, scale = "adjr2")
+```
+```{r}
+# Check for linearity assumption using a scatterplot
+plot(final_lm1$fitted.values,
+final_lm1$residuals)
+```
+
+```{r}
+# Check for homoscedasticity assumption using a plot of residuals against fitted values
+plot(final_lm1$fitted.values, final_lm1$residuals, pch = 16, main = "Residuals vs Fitted", 
+     xlab = "Fitted values", ylab = "Residuals")
+abline(h = 0, col = "red")
+```
+```{r}
+# Check for normality assumption using a normal probability plot
+qqnorm(final_lm1$residuals)
+qqline(final_lm1$residuals)
+```
+
+```{r}
+# Using Variance inflation factor (VIF) to check for multicollinearity assumption
+
+vif(final_lm1)
+```
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+# calculating  mortality rate by dividing death rate by incidence rate
+mortalityRate <- data1$deathRate / data1$incidenceRate
+```
+
+
+```{r}
+# Building a new regression model for mortality rate using the same predictors
+
+mortality_rate_model <- lm(mortalityRate ~ incidenceRate  +  MedianAgeFemale + AvgHouseholdSize   + logPctBachDeg25_Over + sqrtPctUnemployed16_Over + PctPublicCoverageAlone +PctWhite+ sqrtPctOtherRace, data=data1)
+summary(mortality_rate_model)
+```
+
+```{r}
+#plotting 'mortality rate' model
+par(mfrow=c(2,2))
+plot(mortality_rate_model)
+```
+
+
+
+
+
+
+
+
+
