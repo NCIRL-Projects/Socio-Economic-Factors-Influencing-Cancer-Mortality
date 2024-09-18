@@ -9,7 +9,7 @@ We utilize Multiple Linear Regression to analyze the relationship between cancer
 ### Multiple Linear Regression Formula
 The formula for Multiple Linear Regression is:
 
-\[ y = b0 + b1x1 + b2x2 + \dots + bnxn + \epsilon \]
+\[ y = b0 + b1x1 + b2x2 + \... + bnxn + \epsilon \]
 
 Where:
 - `y` is the dependent variable (cancer mortality rate),
